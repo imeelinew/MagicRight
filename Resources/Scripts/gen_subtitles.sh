@@ -12,7 +12,7 @@ MODEL="$HOME/whisper-models/ggml-medium.bin"
 WHISPER_LANG="zh"
 
 notify() {
-    /usr/bin/osascript -e "display notification \"$1\" with title \"生成字幕\""
+    echo "NOTICE: 生成字幕: $1"
 }
 
 fmt_time() {

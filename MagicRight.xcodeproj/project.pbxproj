@@ -12,6 +12,7 @@
 		3CF60418FBB425DE1265DB11 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D284C6F007745B0E9645D7 /* AppDelegate.swift */; };
 		5C18A71E692CAFB978F50239 /* MagicRightWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70674DEF14A4058329AC6AEF /* MagicRightWindowController.swift */; };
 		5CB808BBF77533791FF5AD53 /* MagicRightFinderSync.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9BB2866BC6FDBD084B36BE12 /* MagicRightFinderSync.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5E55EB5FDA06B71FB58195E3 /* MenuBarNotificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF586B5EC93F3EE5170A5A1 /* MenuBarNotificationView.swift */; };
 		72EB0E0B46F1ADE7FB3FFA0B /* Scripts in Resources */ = {isa = PBXBuildFile; fileRef = 68A96CB11700EA12C29A229A /* Scripts */; };
 		95401E7378696CDFCAB3B76F /* MagicRightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 570C2A6A31BCAD0BB1B7C2F1 /* MagicRightView.swift */; };
 		A956D7BEB4A380DA2A07306C /* FinderSyncExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EE04436D5CF84663796FAF /* FinderSyncExt.swift */; };
@@ -45,6 +46,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2DF586B5EC93F3EE5170A5A1 /* MenuBarNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarNotificationView.swift; sourceTree = "<group>"; };
 		50BDCA36A0FB14184EDE7A7A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		570C2A6A31BCAD0BB1B7C2F1 /* MagicRightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagicRightView.swift; sourceTree = "<group>"; };
 		5E6718CB9DF585C9133FC300 /* MagicRight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MagicRight.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,6 +96,7 @@
 				70674DEF14A4058329AC6AEF /* MagicRightWindowController.swift */,
 				50BDCA36A0FB14184EDE7A7A /* main.swift */,
 				64958F20322C2712EA1D017C /* MenuActionConfiguration.swift */,
+				2DF586B5EC93F3EE5170A5A1 /* MenuBarNotificationView.swift */,
 				C89F614F631F383DE91BD72C /* WindowBackgroundBlur.swift */,
 			);
 			name = MagicRight;
@@ -221,6 +224,7 @@
 				95401E7378696CDFCAB3B76F /* MagicRightView.swift in Sources */,
 				5C18A71E692CAFB978F50239 /* MagicRightWindowController.swift in Sources */,
 				FE7E1718AC968985559A4C90 /* MenuActionConfiguration.swift in Sources */,
+				5E55EB5FDA06B71FB58195E3 /* MenuBarNotificationView.swift in Sources */,
 				DF69FDB74A785CE1DDE9466E /* WindowBackgroundBlur.swift in Sources */,
 				042D6BDF00481CEC1348E7DC /* main.swift in Sources */,
 			);

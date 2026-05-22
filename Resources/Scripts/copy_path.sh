@@ -3,8 +3,23 @@ LOG="$HOME/Library/Logs/magicright.log"
 [ "$(/usr/bin/stat -f%z "$LOG" 2>/dev/null || echo 0)" -gt 1048576 ] && /bin/mv "$LOG" "$LOG.1"
 exec >>"$LOG" 2>&1
 echo "=== $(date) [copy-path] argc=$# ==="
+EVENT_DIR="$HOME/Library/Application Scripts/local.elidev.MagicRight.FinderSync"
+EVENT_FILE="$EVENT_DIR/popover-event.txt"
+
+emit_popover() {
+    /bin/mkdir -p "$EVENT_DIR"
+    local tmp="$EVENT_FILE.$$"
+    {
+        print -r -- "$1"
+        print -r -- "$2"
+        print -r -- "$3"
+        /bin/date +%s
+    } > "$tmp"
+    /bin/mv "$tmp" "$EVENT_FILE"
+}
+
 if [ "$#" -eq 0 ]; then
-    /usr/bin/osascript -e "display notification \"没有可复制的路径\" with title \"复制路径\""
+    emit_popover "error" "复制路径" "没有可复制的路径"
     echo "SKIP: no args"
     exit 0
 fi
@@ -20,5 +35,17 @@ for p in "$@"; do
 done
 /usr/bin/osascript -e "set the clipboard to (read (POSIX file \"$tmp\") as «class utf8»)"
 /bin/rm -f "$tmp"
-/usr/bin/osascript -e "display notification \"已复制路径\" with title \"复制路径\""
+if [ "$#" -eq 1 ]; then
+    emit_popover "success" "复制路径" "已复制路径 $1"
+else
+    joined=""
+    for p in "$@"; do
+        if [ -z "$joined" ]; then
+            joined="$p"
+        else
+            joined="$joined | $p"
+        fi
+    done
+    emit_popover "success" "复制路径" "已复制路径 $joined"
+fi
 echo "OK: path(s) copied"

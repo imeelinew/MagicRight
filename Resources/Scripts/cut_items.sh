@@ -12,7 +12,7 @@ tmp_file=$(/usr/bin/mktemp /tmp/sr-cut.XXXXXX) || exit 1
 
 if ! /bin/mkdir -p "$state_dir"; then
     /bin/rm -f "$tmp_file"
-    /usr/bin/osascript -e "display notification \"无法创建状态目录\" with title \"剪切\""
+    echo "NOTICE: 剪切: 无法创建状态目录"
     exit 1
 fi
 
@@ -67,7 +67,7 @@ count="${#selected[@]}"
 
 if [ "$count" -eq 0 ]; then
     /bin/rm -f "$tmp_file"
-    /usr/bin/osascript -e "display notification \"请先选中文件或文件夹\" with title \"剪切\""
+    echo "NOTICE: 剪切: 请先选中文件或文件夹"
     exit 0
 fi
 
@@ -76,5 +76,5 @@ for path in "${selected[@]}"; do
 done
 
 /bin/mv "$tmp_file" "$state_file"
-/usr/bin/osascript -e "display notification \"已暂存 $count 项 | 前往目标文件夹后点击粘贴\" with title \"剪切\""
+    echo "NOTICE: 剪切: 已暂存 $count 项 | 前往目标文件夹后点击粘贴"
 echo "OK: cut items stored count=$count"

@@ -10,13 +10,13 @@ state_dir="$HOME/Library/Application Support/MagicRight"
 state_file="$state_dir/cut-items.bin"
 
 if [ "$#" -ne 1 ] || [ ! -d "$1" ]; then
-    /usr/bin/osascript -e "display notification \"请在目标文件夹空白处或文件夹本身使用\" with title \"粘贴\""
+    echo "NOTICE: 粘贴: 请在目标文件夹空白处或文件夹本身使用"
     exit 0
 fi
 
 dest="$1"
 if [ ! -s "$state_file" ]; then
-    /usr/bin/osascript -e "display notification \"当前没有已剪切的项目\" with title \"粘贴\""
+    echo "NOTICE: 粘贴: 当前没有已剪切的项目"
     exit 0
 fi
 
@@ -24,7 +24,7 @@ fi
 state_age=$(( $(/bin/date +%s) - $(/usr/bin/stat -f%m "$state_file" 2>/dev/null || echo 0) ))
 if [ "$state_age" -gt 86400 ]; then
     /bin/rm -f "$state_file"
-    /usr/bin/osascript -e "display notification \"已剪切内容超过 24 小时，已自动清空\" with title \"粘贴\""
+    echo "NOTICE: 粘贴: 已剪切内容超过 24 小时，已自动清空"
     exit 0
 fi
 
@@ -108,5 +108,5 @@ fi
 if [ "$kept" -gt 0 ]; then
     msg="$msg | 保留 $kept 项待重试"
 fi
-/usr/bin/osascript -e "display notification \"$msg\" with title \"粘贴\""
+    echo "NOTICE: 粘贴: $msg"
 echo "DONE: moved=$moved missing=$missing kept=$kept same_dir_kept=$same_dir_kept recursive_kept=$recursive_kept failed_kept=$failed_kept dest=$dest"

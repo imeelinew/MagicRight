@@ -17,6 +17,6 @@ for dir in "$@"; do
         /usr/bin/osascript -e "tell application \"Finder\" to update (POSIX file \"$dir\" as alias)"
     else
         echo "FAIL: $target"
-        /usr/bin/osascript -e "display notification \"创建失败: $target\" with title \"新建 docx 文件\""
+    echo "NOTICE: 新建 docx 文件: 创建失败: $target"
     fi
 done

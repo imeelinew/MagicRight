@@ -12,7 +12,7 @@ export GIT_ASKPASS=/usr/bin/false
 export SSH_ASKPASS=/usr/bin/false
 
 notify() {
-    /usr/bin/osascript -e "display notification \"$1\" with title \"提交并推送当前仓库\""
+    echo "NOTICE: 提交并推送当前仓库: $1"
 }
 
 if [ ! -x /usr/bin/git ]; then
