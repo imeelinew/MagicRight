@@ -1,0 +1,7 @@
+# Build products
+.build/
+DerivedData/
+build/
+
+# macOS
+.DS_Store

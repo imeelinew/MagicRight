@@ -1,0 +1,54 @@
+name: MagicRight
+options:
+  bundleIdPrefix: local.elidev
+  deploymentTarget:
+    macOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+
+targets:
+  MagicRight:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/MagicRight
+      - path: icon/MagicRight.icon
+      - path: Resources/Scripts
+        type: folder
+      - path: Resources/Templates
+        type: folder
+    dependencies:
+      - target: MagicRightFinderSync
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.elidev.MagicRight
+        PRODUCT_NAME: MagicRight
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_FILE: Supporting/MagicRight-Info.plist
+        INFOPLIST_KEY_LSUIElement: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: MagicRight
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+    scheme:
+      testTargets: []
+
+  MagicRightFinderSync:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/MagicRightFinderSync
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.elidev.MagicRight.FinderSync
+        PRODUCT_NAME: MagicRightFinderSync
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_FILE: Supporting/MagicRightFinderSync-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Supporting/MagicRightFinderSync.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
