@@ -115,23 +115,27 @@ final class WindowOperationManager {
     }
 
     func moveFocusedWindowLeftHalf() {
+        guard WindowOperationConfiguration.isEnabled(.leftHalf) else { return }
         performWindowOperation(.leftHalf)
     }
 
     func moveFocusedWindowRightHalf() {
+        guard WindowOperationConfiguration.isEnabled(.rightHalf) else { return }
         performWindowOperation(.rightHalf)
     }
 
     func maximizeFocusedWindow() {
+        guard WindowOperationConfiguration.isEnabled(.maximized) else { return }
         performWindowOperation(.maximized)
     }
 
     func centerFocusedWindow() {
+        guard WindowOperationConfiguration.isEnabled(.centered) else { return }
         performWindowOperation(.centeredDefault)
     }
 
     func minimizeOtherApplicationWindows() {
-        guard WindowOperationConfiguration.isEnabled() else { return }
+        guard WindowOperationConfiguration.isEnabled(.minimizeOthers) else { return }
         guard AXIsProcessTrusted() else { return }
         guard let frontmostApplication = NSWorkspace.shared.frontmostApplication else { return }
 
@@ -143,7 +147,6 @@ final class WindowOperationManager {
     }
 
     private func performWindowOperation(_ layout: WindowLayout) {
-        guard WindowOperationConfiguration.isEnabled() else { return }
         guard AXIsProcessTrusted() else { return }
         guard let target = focusedWindow() else { return }
         move(target, to: layout)

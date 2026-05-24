@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventSource: DispatchSourceFileSystemObject?
     private var eventDirectoryDescriptor: CInt = -1
     private var didDisableFinderExtensionForTermination = false
+    private var defaultsObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -24,10 +25,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installApplicationScripts()
         setFinderExtensionEnabled(true)
         windowOperationManager.start()
+        observeDefaultsChanges()
         startPopoverEventWatcher()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if let defaultsObserver {
+            NotificationCenter.default.removeObserver(defaultsObserver)
+        }
         windowOperationManager.stop()
         disableFinderExtensionForTermination()
     }
@@ -75,46 +80,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = makeMenu()
     }
 
+    private func observeDefaultsChanges() {
+        defaultsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.statusItem.menu = self?.makeMenu()
+            }
+        }
+    }
+
     private func makeMenu() -> NSMenu {
         let menu = NSMenu(title: "MagicActions")
 
         addWindowOperationItem(
             to: menu,
-            title: "窗口左半屏",
-            symbolName: "rectangle.lefthalf.filled",
+            operation: .leftHalf,
             action: #selector(moveFocusedWindowLeftHalf),
             keyEquivalent: String(Character(UnicodeScalar(NSLeftArrowFunctionKey)!))
         )
         addWindowOperationItem(
             to: menu,
-            title: "窗口右半屏",
-            symbolName: "rectangle.righthalf.filled",
+            operation: .rightHalf,
             action: #selector(moveFocusedWindowRightHalf),
             keyEquivalent: String(Character(UnicodeScalar(NSRightArrowFunctionKey)!))
         )
         addWindowOperationItem(
             to: menu,
-            title: "窗口最大化",
-            symbolName: "arrow.up.left.and.arrow.down.right",
+            operation: .maximized,
             action: #selector(maximizeFocusedWindow),
             keyEquivalent: String(Character(UnicodeScalar(NSUpArrowFunctionKey)!))
         )
         addWindowOperationItem(
             to: menu,
-            title: "窗口居中",
-            symbolName: "rectangle.center.inset.filled",
+            operation: .centered,
             action: #selector(centerFocusedWindow),
             keyEquivalent: String(Character(UnicodeScalar(NSDownArrowFunctionKey)!))
         )
         addWindowOperationItem(
             to: menu,
-            title: "最小化其它窗口",
-            symbolName: "minus.rectangle",
+            operation: .minimizeOthers,
             action: #selector(minimizeOtherApplicationWindows),
             keyEquivalent: String(Character(UnicodeScalar(NSDownArrowFunctionKey)!)),
             modifierMask: [.command, .option]
         )
-        menu.addItem(.separator())
+        if !menu.items.isEmpty {
+            menu.addItem(.separator())
+        }
         menu.addItem(
             withTitle: "打开 MagicActions",
             action: #selector(showMainWindow),
@@ -130,16 +144,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func addWindowOperationItem(
         to menu: NSMenu,
-        title: String,
-        symbolName: String,
+        operation: WindowOperation,
         action: Selector,
         keyEquivalent: String = "",
         modifierMask: NSEvent.ModifierFlags = [.command]
     ) {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        guard WindowOperationConfiguration.isEnabled(operation) else { return }
+        let item = NSMenuItem(title: operation.title, action: action, keyEquivalent: keyEquivalent)
         item.target = self
         item.keyEquivalentModifierMask = keyEquivalent.isEmpty ? [] : modifierMask
-        item.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: title)
+        item.image = NSImage(systemSymbolName: operation.symbolName, accessibilityDescription: operation.title)
         item.image?.isTemplate = true
         menu.addItem(item)
     }

@@ -17,21 +17,22 @@ unregister_app() {
   fi
 }
 
-unregister_build_products() {
+remove_build_products() {
   local app_path
   while IFS= read -r app_path; do
     [ "$app_path" = "$APP_DEST" ] && continue
     unregister_app "$app_path"
+    rm -rf "$app_path"
   done < <(
     find "$ROOT_DIR/.build" "$HOME/Library/Developer/Xcode/DerivedData" \
       -path "*/MagicActions.app" -type d -prune 2>/dev/null || true
   )
 }
 
+remove_build_products
 "$ROOT_DIR/scripts/build-app.sh"
 
 mkdir -p "$HOME/Applications"
-unregister_build_products
 unregister_app "$APP_DEST"
 rm -rf "$APP_DEST"
 ditto "$APP_SOURCE" "$APP_DEST"
@@ -40,7 +41,7 @@ ditto "$APP_SOURCE" "$APP_DEST"
 
 pluginkit -a "$APP_DEST/Contents/PlugIns/MagicActionsFinderSync.appex" || true
 pluginkit -e use -i "$EXTENSION_ID" || true
-unregister_build_products
+remove_build_products
 
 open "$APP_DEST"
 

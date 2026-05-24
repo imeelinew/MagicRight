@@ -41,6 +41,9 @@ final class FinderSyncExt: FIFinderSync {
         let tint: NSColor = isDark ? .white : .black
 
         let enabledServiceIDs = enabledServiceIDs
+        guard !enabledServiceIDs.isEmpty else {
+            return menu
+        }
 
         for (index, service) in services.enumerated() where enabledServiceIDs.contains(service.id) {
             let item = NSMenuItem(

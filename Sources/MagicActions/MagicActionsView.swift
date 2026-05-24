@@ -4,9 +4,13 @@ import SwiftUI
 
 struct MagicActionsView: View {
     @State private var selection: SettingsPage? = .contextMenu
+    @State private var contextMenuEnabled = MenuActionConfiguration.isEnabled()
     @State private var enabledActionIDs = MenuActionConfiguration.enabledIDs()
     @State private var windowOperationsEnabled = WindowOperationConfiguration.isEnabled()
-    @State private var searchText = ""
+    @State private var enabledWindowOperationIDs = WindowOperationConfiguration.enabledIDs()
+    @State private var contextMenuSearchText = ""
+    @State private var windowOperationsSearchText = ""
+    @State private var menuBarSearchText = ""
     private let sidebarIconTileSize: Double = 22
     private let sidebarIconSymbolSize: Double = 11
     private let sidebarIconCornerRadius: Double = 6
@@ -14,6 +18,7 @@ struct MagicActionsView: View {
     enum SettingsPage: String, CaseIterable, Hashable, Identifiable {
         case contextMenu
         case windowOperations
+        case menuBar
 
         var id: String { rawValue }
         var title: String {
@@ -22,6 +27,8 @@ struct MagicActionsView: View {
                 return "右键菜单"
             case .windowOperations:
                 return "窗口操作"
+            case .menuBar:
+                return "菜单栏"
             }
         }
 
@@ -31,6 +38,8 @@ struct MagicActionsView: View {
                 return "contextualmenu.and.cursorarrow"
             case .windowOperations:
                 return "rectangle.on.rectangle"
+            case .menuBar:
+                return "menubar.rectangle"
             }
         }
 
@@ -48,8 +57,54 @@ struct MagicActionsView: View {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
+            case .menuBar:
+                return LinearGradient(
+                    colors: [Color(red: 0.32, green: 0.68, blue: 0.58), Color(red: 0.10, green: 0.48, blue: 0.42)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         }
+    }
+
+    private var selectedPage: SettingsPage {
+        selection ?? .contextMenu
+    }
+
+    private var searchPrompt: String {
+        switch selectedPage {
+        case .contextMenu:
+            return "搜索右键菜单"
+        case .windowOperations:
+            return "搜索窗口操作"
+        case .menuBar:
+            return "搜索菜单栏"
+        }
+    }
+
+    private var searchTextBinding: Binding<String> {
+        Binding(
+            get: {
+                switch selectedPage {
+                case .contextMenu:
+                    return contextMenuSearchText
+                case .windowOperations:
+                    return windowOperationsSearchText
+                case .menuBar:
+                    return menuBarSearchText
+                }
+            },
+            set: { newValue in
+                switch selectedPage {
+                case .contextMenu:
+                    contextMenuSearchText = newValue
+                case .windowOperations:
+                    windowOperationsSearchText = newValue
+                case .menuBar:
+                    menuBarSearchText = newValue
+                }
+            }
+        )
     }
 
     var body: some View {
@@ -69,13 +124,13 @@ struct MagicActionsView: View {
                 .formStyle(.grouped)
                 .settingsContentMargins()
                 .scrollContentBackground(.hidden)
-                .navigationTitle(selection?.title ?? SettingsPage.contextMenu.title)
+                .navigationTitle(selectedPage.title)
             }
         }
         .environment(\.sidebarIconTileSize, sidebarIconTileSize)
         .environment(\.sidebarIconSymbolSize, sidebarIconSymbolSize)
         .environment(\.sidebarIconCornerRadius, sidebarIconCornerRadius)
-        .searchable(text: $searchText, placement: .toolbar, prompt: "搜索右键菜单")
+        .searchable(text: searchTextBinding, placement: .toolbar, prompt: Text(searchPrompt))
         .background {
             WindowTransparencyConfigurator(enabled: true)
                 .frame(width: 0, height: 0)
@@ -85,26 +140,39 @@ struct MagicActionsView: View {
         }
         .onAppear {
             persistEnabledActions()
+            persistEnabledWindowOperations()
+        }
+        .onChange(of: contextMenuEnabled) { _, _ in
+            persistEnabledActions()
         }
         .onChange(of: enabledActionIDs) { _, _ in
             persistEnabledActions()
         }
-        .onChange(of: windowOperationsEnabled) { _, isEnabled in
-            WindowOperationConfiguration.setEnabled(isEnabled)
+        .onChange(of: windowOperationsEnabled) { _, _ in
+            persistEnabledWindowOperations()
+        }
+        .onChange(of: enabledWindowOperationIDs) { _, _ in
+            persistEnabledWindowOperations()
         }
     }
 
     @ViewBuilder
     private var detailContent: some View {
-        switch selection ?? .contextMenu {
+        switch selectedPage {
         case .contextMenu:
             Form {
-                Section("右键显示选项") {
-                    ForEach(filteredActions) { action in
-                        Toggle(isOn: binding(for: action)) {
-                            HStack(spacing: 10) {
-                                MenuActionIcon(actionID: action.id, size: 24)
-                                Text(action.title)
+                Section("总开关") {
+                    Toggle("启用右键菜单", isOn: $contextMenuEnabled)
+                }
+
+                if contextMenuEnabled {
+                    Section("右键显示选项") {
+                        ForEach(filteredActions) { action in
+                            Toggle(isOn: binding(for: action)) {
+                                HStack(spacing: 10) {
+                                    MenuActionIcon(actionID: action.id, size: 24)
+                                    Text(action.title)
+                                }
                             }
                         }
                     }
@@ -112,24 +180,47 @@ struct MagicActionsView: View {
             }
         case .windowOperations:
             Form {
-                Section("窗口操作") {
+                Section("总开关") {
                     Toggle("启用窗口操作", isOn: $windowOperationsEnabled)
                 }
 
                 if windowOperationsEnabled {
+                    Section("窗口操作") {
+                        ForEach(filteredWindowOperations) { operation in
+                            Toggle(isOn: binding(for: operation)) {
+                                HStack(spacing: 10) {
+                                    WindowOperationIcon(operation: operation, size: 24)
+                                    Text(operation.title)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if windowOperationsEnabled && !enabledWindowOperationIDs.isEmpty {
                     Section("权限") {
                         AccessibilityPermissionRow()
                     }
                 }
             }
+        case .menuBar:
+            Form {}
         }
     }
 
     private var filteredActions: [MenuAction] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = contextMenuSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return MenuAction.all }
         return MenuAction.all.filter { action in
             action.title.localizedStandardContains(query)
+        }
+    }
+
+    private var filteredWindowOperations: [WindowOperation] {
+        let query = windowOperationsSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return WindowOperation.all }
+        return WindowOperation.all.filter { operation in
+            operation.title.localizedStandardContains(query)
         }
     }
 
@@ -146,9 +237,28 @@ struct MagicActionsView: View {
         )
     }
 
+    private func binding(for operation: WindowOperation) -> Binding<Bool> {
+        Binding(
+            get: { enabledWindowOperationIDs.contains(operation.id) },
+            set: { isEnabled in
+                if isEnabled {
+                    enabledWindowOperationIDs.insert(operation.id)
+                } else {
+                    enabledWindowOperationIDs.remove(operation.id)
+                }
+            }
+        )
+    }
+
     private func persistEnabledActions() {
+        MenuActionConfiguration.setEnabled(contextMenuEnabled)
         MenuActionConfiguration.setEnabledIDs(enabledActionIDs)
-        MenuActionConfiguration.writeEnabledIDs(enabledActionIDs)
+        MenuActionConfiguration.writeEnabledIDs(enabledActionIDs, isEnabled: contextMenuEnabled)
+    }
+
+    private func persistEnabledWindowOperations() {
+        WindowOperationConfiguration.setEnabled(windowOperationsEnabled)
+        WindowOperationConfiguration.setEnabledIDs(enabledWindowOperationIDs)
     }
 }
 
@@ -326,6 +436,67 @@ private struct MenuActionIcon: View {
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.white)
             }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+private struct WindowOperationIcon: View {
+    let operation: WindowOperation
+    let size: CGFloat
+
+    private var gradient: LinearGradient {
+        LinearGradient(
+            colors: gradientColors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var gradientColors: [Color] {
+        switch operation.id {
+        case WindowOperation.leftHalf.id:
+            return [
+                Color(red: 0.24, green: 0.58, blue: 0.96),
+                Color(red: 0.10, green: 0.34, blue: 0.76)
+            ]
+        case WindowOperation.rightHalf.id:
+            return [
+                Color(red: 0.40, green: 0.52, blue: 0.96),
+                Color(red: 0.18, green: 0.28, blue: 0.72)
+            ]
+        case WindowOperation.maximized.id:
+            return [
+                Color(red: 0.26, green: 0.70, blue: 0.52),
+                Color(red: 0.12, green: 0.52, blue: 0.36)
+            ]
+        case WindowOperation.centered.id:
+            return [
+                Color(red: 0.56, green: 0.46, blue: 0.90),
+                Color(red: 0.36, green: 0.26, blue: 0.68)
+            ]
+        case WindowOperation.minimizeOthers.id:
+            return [
+                Color(red: 0.86, green: 0.48, blue: 0.26),
+                Color(red: 0.66, green: 0.24, blue: 0.16)
+            ]
+        default:
+            return [
+                Color(red: 0.48, green: 0.58, blue: 0.70),
+                Color(red: 0.25, green: 0.34, blue: 0.48)
+            ]
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(gradient)
+
+            Image(systemName: operation.symbolName)
+                .font(.system(size: size * 0.48, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
     }

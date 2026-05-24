@@ -20,17 +20,36 @@ struct MenuAction: Identifiable, Hashable {
 }
 
 enum MenuActionConfiguration {
+    static let isEnabledKey = "contextMenuEnabled"
     static let enabledIDsKey = "enabledMenuActionIDs"
     static let filename = "menu-actions.json"
     static let extensionBundleIdentifier = "local.elidev.MagicActions.FinderSync"
+
+    static var defaultIsEnabled: Bool {
+        true
+    }
 
     static var defaultEnabledIDs: Set<String> {
         Set(MenuAction.all.map(\.id))
     }
 
+    static func isEnabled() -> Bool {
+        guard UserDefaults.standard.object(forKey: isEnabledKey) != nil else {
+            return defaultIsEnabled
+        }
+        return UserDefaults.standard.bool(forKey: isEnabledKey)
+    }
+
+    static func setEnabled(_ isEnabled: Bool) {
+        UserDefaults.standard.set(isEnabled, forKey: isEnabledKey)
+    }
+
     static func enabledIDs() -> Set<String> {
+        guard UserDefaults.standard.object(forKey: enabledIDsKey) != nil else {
+            return defaultEnabledIDs
+        }
         let stored = UserDefaults.standard.stringArray(forKey: enabledIDsKey) ?? []
-        return stored.isEmpty ? defaultEnabledIDs : Set(stored)
+        return Set(stored)
     }
 
     static func setEnabledIDs(_ ids: Set<String>) {
@@ -44,14 +63,15 @@ enum MenuActionConfiguration {
             .appendingPathComponent(filename)
     }
 
-    static func writeEnabledIDs(_ ids: Set<String>) {
+    static func writeEnabledIDs(_ ids: Set<String>, isEnabled: Bool = isEnabled()) {
         do {
             let url = configurationURL()
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            let data = try JSONEncoder().encode(Array(ids).sorted())
+            let enabledIDs = isEnabled ? ids : []
+            let data = try JSONEncoder().encode(Array(enabledIDs).sorted())
             if let existingData = try? Data(contentsOf: url), existingData == data {
                 return
             }
@@ -64,9 +84,14 @@ enum MenuActionConfiguration {
 
 enum WindowOperationConfiguration {
     static let isEnabledKey = "windowOperationsEnabled"
+    static let enabledIDsKey = "enabledWindowOperationIDs"
 
     static var defaultIsEnabled: Bool {
         true
+    }
+
+    static var defaultEnabledIDs: Set<String> {
+        Set(WindowOperation.all.map(\.id))
     }
 
     static func isEnabled() -> Bool {
@@ -79,4 +104,60 @@ enum WindowOperationConfiguration {
     static func setEnabled(_ isEnabled: Bool) {
         UserDefaults.standard.set(isEnabled, forKey: isEnabledKey)
     }
+
+    static func enabledIDs() -> Set<String> {
+        guard UserDefaults.standard.object(forKey: enabledIDsKey) != nil else {
+            return isEnabled() ? defaultEnabledIDs : []
+        }
+        let stored = UserDefaults.standard.stringArray(forKey: enabledIDsKey) ?? []
+        return Set(stored)
+    }
+
+    static func setEnabledIDs(_ ids: Set<String>) {
+        UserDefaults.standard.set(Array(ids).sorted(), forKey: enabledIDsKey)
+    }
+
+    static func isEnabled(_ operation: WindowOperation) -> Bool {
+        isEnabled() && enabledIDs().contains(operation.id)
+    }
+}
+
+struct WindowOperation: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let symbolName: String
+
+    static let leftHalf = WindowOperation(
+        id: "left-half",
+        title: "窗口左半屏",
+        symbolName: "rectangle.lefthalf.filled"
+    )
+    static let rightHalf = WindowOperation(
+        id: "right-half",
+        title: "窗口右半屏",
+        symbolName: "rectangle.righthalf.filled"
+    )
+    static let maximized = WindowOperation(
+        id: "maximized",
+        title: "窗口最大化",
+        symbolName: "arrow.up.left.and.arrow.down.right"
+    )
+    static let centered = WindowOperation(
+        id: "centered",
+        title: "窗口居中",
+        symbolName: "rectangle.center.inset.filled"
+    )
+    static let minimizeOthers = WindowOperation(
+        id: "minimize-others",
+        title: "最小化其它窗口",
+        symbolName: "minus.rectangle"
+    )
+
+    static let all: [WindowOperation] = [
+        .leftHalf,
+        .rightHalf,
+        .maximized,
+        .centered,
+        .minimizeOthers
+    ]
 }
