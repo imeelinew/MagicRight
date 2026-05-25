@@ -141,6 +141,56 @@ enum MenuBarConfiguration {
     }
 }
 
+enum InputCorrectionConfiguration {
+    static let isEnabledKey = "inputCorrectionEnabled"
+    static let modelSourceKey = "inputCorrectionModelSource"
+    static let modelKey = "inputCorrectionModel"
+    static let baseURLKey = "inputCorrectionBaseURL"
+
+    static let defaultModelSource = "remoteAPI"
+    static let defaultModel = "google/gemini-3.1-flash-lite"
+    static let defaultBaseURL = "https://openrouter.ai/api/v1/chat/completions"
+
+    static var defaultIsEnabled: Bool {
+        false
+    }
+
+    static func isEnabled() -> Bool {
+        guard UserDefaults.standard.object(forKey: isEnabledKey) != nil else {
+            return defaultIsEnabled
+        }
+        return UserDefaults.standard.bool(forKey: isEnabledKey)
+    }
+
+    static func setEnabled(_ isEnabled: Bool) {
+        UserDefaults.standard.set(isEnabled, forKey: isEnabledKey)
+    }
+
+    static func modelSource() -> String {
+        UserDefaults.standard.string(forKey: modelSourceKey) ?? defaultModelSource
+    }
+
+    static func setModelSource(_ modelSource: String) {
+        UserDefaults.standard.set(modelSource, forKey: modelSourceKey)
+    }
+
+    static func model() -> String {
+        UserDefaults.standard.string(forKey: modelKey) ?? defaultModel
+    }
+
+    static func setModel(_ model: String) {
+        UserDefaults.standard.set(model, forKey: modelKey)
+    }
+
+    static func baseURL() -> String {
+        UserDefaults.standard.string(forKey: baseURLKey) ?? defaultBaseURL
+    }
+
+    static func setBaseURL(_ baseURL: String) {
+        UserDefaults.standard.set(baseURL, forKey: baseURLKey)
+    }
+}
+
 struct WindowOperation: Identifiable, Hashable {
     let id: String
     let title: String

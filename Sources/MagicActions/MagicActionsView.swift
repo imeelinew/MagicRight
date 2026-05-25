@@ -9,9 +9,17 @@ struct MagicActionsView: View {
     @State private var windowOperationsEnabled = WindowOperationConfiguration.isEnabled()
     @State private var enabledWindowOperationIDs = WindowOperationConfiguration.enabledIDs()
     @State private var showsNetworkSpeed = MenuBarConfiguration.showsNetworkSpeed()
+    @State private var inputCorrectionEnabled = InputCorrectionConfiguration.isEnabled()
+    @State private var inputCorrectionModelSource = InputCorrectionConfiguration.modelSource()
+    @State private var inputCorrectionAPIKey = KeychainStore.string(for: KeychainStore.inputCorrectionAPIKeyAccount)
+    @State private var inputCorrectionModel = InputCorrectionConfiguration.model()
+    @State private var inputCorrectionBaseURL = InputCorrectionConfiguration.baseURL()
+    @State private var modelConnectionMessage: String?
+    @State private var isTestingModelConnection = false
     @State private var contextMenuSearchText = ""
     @State private var windowOperationsSearchText = ""
     @State private var menuBarSearchText = ""
+    @State private var inputCorrectionSearchText = ""
     private let sidebarIconTileSize: Double = 22
     private let sidebarIconSymbolSize: Double = 11
     private let sidebarIconCornerRadius: Double = 6
@@ -20,6 +28,7 @@ struct MagicActionsView: View {
         case contextMenu
         case windowOperations
         case menuBar
+        case inputCorrection
 
         var id: String { rawValue }
         var title: String {
@@ -30,6 +39,8 @@ struct MagicActionsView: View {
                 return "窗口操作"
             case .menuBar:
                 return "菜单栏"
+            case .inputCorrection:
+                return "输入框"
             }
         }
 
@@ -41,6 +52,8 @@ struct MagicActionsView: View {
                 return "rectangle.on.rectangle"
             case .menuBar:
                 return "menubar.rectangle"
+            case .inputCorrection:
+                return "text.cursor"
             }
         }
 
@@ -64,6 +77,12 @@ struct MagicActionsView: View {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
+            case .inputCorrection:
+                return LinearGradient(
+                    colors: [Color(red: 0.60, green: 0.42, blue: 0.88), Color(red: 0.28, green: 0.48, blue: 0.88)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         }
     }
@@ -80,6 +99,8 @@ struct MagicActionsView: View {
             return "搜索窗口操作"
         case .menuBar:
             return "搜索菜单栏"
+        case .inputCorrection:
+            return "搜索输入框"
         }
     }
 
@@ -93,6 +114,8 @@ struct MagicActionsView: View {
                     return windowOperationsSearchText
                 case .menuBar:
                     return menuBarSearchText
+                case .inputCorrection:
+                    return inputCorrectionSearchText
                 }
             },
             set: { newValue in
@@ -103,9 +126,30 @@ struct MagicActionsView: View {
                     windowOperationsSearchText = newValue
                 case .menuBar:
                     menuBarSearchText = newValue
+                case .inputCorrection:
+                    inputCorrectionSearchText = newValue
                 }
             }
         )
+    }
+
+    private struct CompactBorderedMenuPicker<Option: Hashable>: View {
+        let options: [Option]
+        @Binding var selection: Option
+        let title: (Option) -> String
+
+        var body: some View {
+            Picker("", selection: $selection) {
+                ForEach(options, id: \.self) { option in
+                    Text(title(option)).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .labelsHidden()
+            .frame(minWidth: 108, minHeight: 24)
+        }
     }
 
     var body: some View {
@@ -132,6 +176,18 @@ struct MagicActionsView: View {
         .environment(\.sidebarIconSymbolSize, sidebarIconSymbolSize)
         .environment(\.sidebarIconCornerRadius, sidebarIconCornerRadius)
         .searchable(text: searchTextBinding, placement: .toolbar, prompt: Text(searchPrompt))
+        .alert(
+            "模型配置",
+            isPresented: Binding(
+                get: { modelConnectionMessage != nil },
+                set: { if !$0 { modelConnectionMessage = nil } }
+            ),
+            presenting: modelConnectionMessage
+        ) { _ in
+            Button("好") { modelConnectionMessage = nil }
+        } message: { message in
+            Text(message)
+        }
         .background {
             WindowTransparencyConfigurator(enabled: true)
                 .frame(width: 0, height: 0)
@@ -158,6 +214,9 @@ struct MagicActionsView: View {
         }
         .onChange(of: showsNetworkSpeed) { _, _ in
             persistMenuBarConfiguration()
+        }
+        .onChange(of: inputCorrectionEnabled) { _, _ in
+            persistInputCorrectionEnabled()
         }
     }
 
@@ -212,6 +271,76 @@ struct MagicActionsView: View {
             Form {
                 Section("总开关") {
                     Toggle("显示实时网速", isOn: $showsNetworkSpeed)
+                }
+            }
+        case .inputCorrection:
+            Form {
+                Section("总开关") {
+                    Toggle("启用输入框纠错", isOn: $inputCorrectionEnabled)
+                }
+
+                Section("模型配置") {
+                    LabeledContent {
+                        inputCorrectionModelSourcePicker
+                    } label: {
+                        Text("模型来源")
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        SecureField(
+                            text: $inputCorrectionAPIKey,
+                            prompt: Text("sk-...")
+                        ) {
+                            Label("API Key", systemImage: "key")
+                        }
+                        Text("用于访问云端 OpenAI 兼容服务的 API Key。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField(
+                            text: $inputCorrectionModel,
+                            prompt: Text("gpt-4.1-mini")
+                        ) {
+                            Label("Model", systemImage: "cpu")
+                        }
+                        Text("远程服务的模型名称，如 gpt-4.1-mini。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField(
+                            text: $inputCorrectionBaseURL,
+                            prompt: Text("https://api.openai.com/v1/chat/completions")
+                        ) {
+                            Label("Base URL", systemImage: "link")
+                        }
+                        Text("远程 API 的 chat completions 地址。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 12) {
+                        Button("保存配置") {
+                            saveInputCorrectionModelConfiguration()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button(isTestingModelConnection ? "测试中…" : "测试模型连接") {
+                            testModelConnection()
+                        }
+                        .disabled(isTestingModelConnection)
+
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                if inputCorrectionEnabled {
+                    Section("权限") {
+                        AccessibilityPermissionRow()
+                    }
                 }
             }
         }
@@ -272,6 +401,59 @@ struct MagicActionsView: View {
 
     private func persistMenuBarConfiguration() {
         MenuBarConfiguration.setShowsNetworkSpeed(showsNetworkSpeed)
+    }
+
+    private func persistInputCorrectionEnabled() {
+        InputCorrectionConfiguration.setEnabled(inputCorrectionEnabled)
+    }
+
+    private var inputCorrectionModelSourcePicker: some View {
+        CompactBorderedMenuPicker(
+            options: ["remoteAPI"],
+            selection: $inputCorrectionModelSource,
+            title: { _ in "远程 API" }
+        )
+    }
+
+    private func saveInputCorrectionModelConfiguration() {
+        do {
+            InputCorrectionConfiguration.setModelSource(inputCorrectionModelSource)
+            InputCorrectionConfiguration.setModel(inputCorrectionModel.trimmingCharacters(in: .whitespacesAndNewlines))
+            InputCorrectionConfiguration.setBaseURL(inputCorrectionBaseURL.trimmingCharacters(in: .whitespacesAndNewlines))
+            try KeychainStore.setString(
+                inputCorrectionAPIKey.trimmingCharacters(in: .whitespacesAndNewlines),
+                for: KeychainStore.inputCorrectionAPIKeyAccount
+            )
+            modelConnectionMessage = "模型配置已保存"
+        } catch {
+            modelConnectionMessage = error.localizedDescription
+        }
+    }
+
+    private func testModelConnection() {
+        isTestingModelConnection = true
+        modelConnectionMessage = nil
+
+        let configuration = RemoteModelConfiguration(
+            apiKey: inputCorrectionAPIKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            model: inputCorrectionModel.trimmingCharacters(in: .whitespacesAndNewlines),
+            baseURL: inputCorrectionBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+
+        Task {
+            do {
+                try await RemoteCorrectionClient().testConnection(configuration: configuration)
+                await MainActor.run {
+                    modelConnectionMessage = "连接正常"
+                    isTestingModelConnection = false
+                }
+            } catch {
+                await MainActor.run {
+                    modelConnectionMessage = error.localizedDescription
+                    isTestingModelConnection = false
+                }
+            }
+        }
     }
 }
 

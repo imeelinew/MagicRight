@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var mainWindowController = MagicActionsWindowController()
     private let windowOperationManager = WindowOperationManager()
     private let networkSpeedMonitor = NetworkSpeedMonitor()
+    private let inputCorrectionManager = InputCorrectionManager()
     private var notificationPopover: NSPopover?
     private var notificationDismissWorkItem: DispatchWorkItem?
     private var eventReadWorkItem: DispatchWorkItem?
@@ -31,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installApplicationScripts()
         setFinderExtensionEnabled(true)
         windowOperationManager.start()
+        inputCorrectionManager.refresh()
         observeDefaultsChanges()
         startPopoverEventWatcher()
     }
@@ -40,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NotificationCenter.default.removeObserver(defaultsObserver)
         }
         networkSpeedMonitor.stop()
+        inputCorrectionManager.stop()
         windowOperationManager.stop()
         disableFinderExtensionForTermination()
     }
@@ -72,6 +75,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         fileMenuItem.submenu = fileMenu
         mainMenu.addItem(fileMenuItem)
+
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: "编辑")
+        editMenu.addItem(
+            withTitle: "撤销",
+            action: Selector(("undo:")),
+            keyEquivalent: "z"
+        )
+        editMenu.addItem(
+            withTitle: "重做",
+            action: Selector(("redo:")),
+            keyEquivalent: "Z"
+        )
+        editMenu.addItem(.separator())
+        editMenu.addItem(
+            withTitle: "剪切",
+            action: #selector(NSText.cut(_:)),
+            keyEquivalent: "x"
+        )
+        editMenu.addItem(
+            withTitle: "复制",
+            action: #selector(NSText.copy(_:)),
+            keyEquivalent: "c"
+        )
+        editMenu.addItem(
+            withTitle: "粘贴",
+            action: #selector(NSText.paste(_:)),
+            keyEquivalent: "v"
+        )
+        editMenu.addItem(.separator())
+        editMenu.addItem(
+            withTitle: "全选",
+            action: #selector(NSText.selectAll(_:)),
+            keyEquivalent: "a"
+        )
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
 
         NSApp.mainMenu = mainMenu
     }
@@ -236,6 +276,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 self?.statusItem.menu = self?.makeMenu()
                 self?.refreshStatusItemConfiguration()
+                self?.inputCorrectionManager.refresh()
             }
         }
     }
